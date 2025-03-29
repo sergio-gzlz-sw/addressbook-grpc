@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option csharp_namespace = "GrpcService.Protos";
+option csharp_namespace = "GrpcAddressBookClient.Protos";
 
 import "google/protobuf/field_mask.proto"; // Import FieldMask
 
@@ -23,8 +23,8 @@ message AddressBook {
 
 // Define the gRPC service
 service AddressBookService {
-  rpc GetAddressBook (Empty) returns (AddressBook);	// Define GetAddressBook as a simple RPC (unary)
-  rpc FindPerson (FindPersonRequest) returns (stream Person); // Define FindPerson as a server-streaming RPC
+  rpc GetAddressBook (Empty) returns (AddressBook);
+  rpc FindPerson (FindPersonRequest) returns (stream Person);
 }
 
 // Empty message for the request

@@ -18,6 +18,7 @@ namespace GrpcService.Services
             _addressBook.Persons.Add(new Person { Name = "John Doe", Email = "john.doe@example.com" });
             _addressBook.Persons.Add(new Person { Name = "Mark Twain", Email = "mark.twain@example.com" });
             _addressBook.Persons.Add(new Person { Name = "Alice Smith", Email = "alice.smith@example.com" });
+            _addressBook.Persons.Add(new Person { Name = "Mark Twain Junior", Email = "mark.twain@example.com" });
         }
 
         public override Task<AddressBook> GetAddressBook(Protos.Empty request, ServerCallContext context)
