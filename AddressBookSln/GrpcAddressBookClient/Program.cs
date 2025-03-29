@@ -34,7 +34,7 @@ namespace GrpcAddressBookClient
                 Console.WriteLine($"Found: {person.Name}, {person.Email}");
             }
 
-            Console.WriteLine("\nPress any enter to exit...");
+            Console.WriteLine("\nPress enter to exit...");
             Console.ReadLine();
         }
     }

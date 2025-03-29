@@ -1,60 +1,81 @@
-﻿using Google.Protobuf.WellKnownTypes;
+﻿using Google.Protobuf;
+using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
+using GrpcService.Models;
 using GrpcService.Protos;
+using Person = GrpcService.Models.Person;
 
 namespace GrpcService.Services
 {
     public class AddressBookService : Protos.AddressBookService.AddressBookServiceBase
     {
         private readonly ILogger<AddressBookService> _logger;
-        private readonly AddressBook _addressBook;
+        //private readonly AddressBook _addressBook;
+        private readonly AddressBookContext _dbContext;
 
-        public AddressBookService(ILogger<AddressBookService> logger)
+        public AddressBookService(ILogger<AddressBookService> logger, AddressBookContext dbContext)
         {
             _logger = logger;
+            _dbContext = dbContext;
 
-            // Create an initialize address book
-            _addressBook = new AddressBook();
-            _addressBook.Persons.Add(new Person { Name = "John Doe", Email = "john.doe@example.com" });
-            _addressBook.Persons.Add(new Person { Name = "Mark Twain", Email = "mark.twain@example.com" });
-            _addressBook.Persons.Add(new Person { Name = "Alice Smith", Email = "alice.smith@example.com" });
-            _addressBook.Persons.Add(new Person { Name = "Mark Twain Junior", Email = "mark.twain@example.com" });
-        }
-
-        public override Task<AddressBook> GetAddressBook(Protos.Empty request, ServerCallContext context)
-        {
-            return Task.FromResult(_addressBook);
-        }
-
-        public override async Task FindPerson(FindPersonRequest request, IServerStreamWriter<Person> responseStream, ServerCallContext context)
-        {
-            foreach (var person in _addressBook.Persons)
+            // Seed database if empty
+            if (!_dbContext.Persons.Any())
             {
-                // Compare based on FieldMask received values
-                if (Matches(person, request.Person, request.FieldMask))
-                {
-                    await responseStream.WriteAsync(person);
-                }
+                _dbContext.Persons.AddRange(new List<Person>
+            {
+                new Person { Name = "John Doe", Email = "john.doe@example.com" },
+                new Person { Name = "Jane Doe", Email = "jane.doe@example.com" },
+                new Person { Name = "Alice Smith", Email = "alice.smith@example.com" },
+                new Person { Name = "Mark Twain", Email = "mark.twain@example.com" },
+                new Person { Name = "Mark Twain Junior", Email = "mark.twain@example.com" }
+            });
+                _dbContext.SaveChanges();
             }
         }
 
-        private bool Matches(Person storedPerson, Person searchPerson, FieldMask fieldMask)
+        public override async Task<AddressBook> GetAddressBook(Protos.Empty request, ServerCallContext context)
         {
-            foreach (var path in fieldMask.Paths)
+            var persons = await Task.FromResult(_dbContext.Persons.ToList());
+
+            var response = new AddressBook();
+            response.Persons.AddRange(persons.Select(p => new Protos.Person
+            {
+                Name = p.Name,
+                Email = p.Email
+            }));
+
+            return response;
+        }
+
+        public override async Task FindPerson(FindPersonRequest request, IServerStreamWriter<Protos.Person> responseStream, ServerCallContext context)
+        {
+            var query = _dbContext.Persons.AsQueryable();
+
+            // Filter dabase query based on field mask
+            foreach (var path in request.FieldMask.Paths)
             {
                 switch (path)
                 {
                     case "name":
-                        if (storedPerson.Name != searchPerson.Name)
-                            return false;
+                        query = query.Where(p => p.Name == request.Person.Name);
                         break;
                     case "email":
-                        if (storedPerson.Email != searchPerson.Email)
-                            return false;
+                        query = query.Where(p => p.Email == request.Person.Email);
                         break;
                 }
             }
-            return true;
+
+            var results = await Task.FromResult(query.ToList());
+
+            foreach (var person in results)
+            {
+                await responseStream.WriteAsync(new Protos.Person
+                {
+                    Name = person.Name,
+                    Email = person.Email
+                });
+            }
         }
+
     }
 }
