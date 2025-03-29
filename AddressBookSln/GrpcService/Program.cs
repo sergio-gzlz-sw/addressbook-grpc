@@ -1,5 +1,6 @@
 using GrpcService.Models;
 using GrpcService.Services;
+using Serilog;
 
 namespace GrpcService
 {
@@ -8,6 +9,13 @@ namespace GrpcService
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+
+            // Configure Serilog for structured logging
+            Log.Logger = new LoggerConfiguration()
+                .WriteTo.Console()
+                .CreateLogger();
+
+            builder.Host.UseSerilog();
 
             // Load appsettings.json configuration file
             builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);

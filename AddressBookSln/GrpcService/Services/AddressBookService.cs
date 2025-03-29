@@ -4,6 +4,7 @@ using Grpc.Core;
 using GrpcService.Models;
 using GrpcService.Protos;
 using Person = GrpcService.Models.Person;
+using Serilog;
 
 namespace GrpcService.Services
 {
@@ -30,13 +31,17 @@ namespace GrpcService.Services
                 new Person { Name = "Mark Twain Junior", Email = "mark.twain@example.com" }
             });
                 _dbContext.SaveChanges();
+                Log.Information("Database seeded with initial AddressBook data.");
             }
         }
 
         public override async Task<AddressBook> GetAddressBook(Protos.Empty request, ServerCallContext context)
         {
+            Log.Information("Received GetAddressBook request.");
+
             var persons = await Task.FromResult(_dbContext.Persons.ToList());
 
+            Log.Information("Returning {PersonCount} persons.", persons.Count);
             var response = new AddressBook();
             response.Persons.AddRange(persons.Select(p => new Protos.Person
             {
@@ -49,6 +54,8 @@ namespace GrpcService.Services
 
         public override async Task FindPerson(FindPersonRequest request, IServerStreamWriter<Protos.Person> responseStream, ServerCallContext context)
         {
+            Log.Information("Received FindPerson request with FieldMask: {FieldMask}", string.Join(", ", request.FieldMask.Paths));
+
             var query = _dbContext.Persons.AsQueryable();
 
             // Filter dabase query based on field mask
@@ -66,6 +73,8 @@ namespace GrpcService.Services
             }
 
             var results = await Task.FromResult(query.ToList());
+
+            Log.Information("Found {PersonCount} matching persons.", results.Count);
 
             foreach (var person in results)
             {
